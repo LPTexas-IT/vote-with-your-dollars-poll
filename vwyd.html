@@ -1,0 +1,273 @@
+<style>
+    body {
+        font-family: Arial, sans-serif;
+    }
+
+    .grid-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
+        text-align: center;
+    }
+
+    .grid-item {
+        border: none;
+        padding: 20px;
+        box-sizing: border-box;
+    }
+
+    .grid-item img {
+        display: block;
+        margin: 0 auto;
+        width: 250px;
+        height: 250px;
+    }
+
+    .grid-item a {
+        display: block;
+        margin-top: 10px;
+        text-decoration: none;
+        font-weight: bold;
+        color: #fed000;
+    }
+
+
+
+
+
+
+
+    /* Carter style */
+    .graph-container {
+        display: flex;
+        justify-content: space-between;
+        max-width: 800px;
+        margin: 20px auto;
+        background-color: #9aa6b9;
+        border-radius: 8px;
+        box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+    }
+
+    .bar {
+        display: flex;
+        flex-direction: column-reverse;
+        align-items: baseline;
+        /* Align items to the baseline */
+        flex: 0 0 calc((100% / 7) - 2);
+        position: relative;
+    }
+
+    .bar img {
+        align-self: baseline;
+        /* Align the image to the baseline */
+        position: relative;
+        top: 3px;
+    }
+
+    .bar-inner {
+        text-align: center;
+        height: 100%;
+        width: 100%;
+        box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.1);
+        color: black;
+        border-top-left-radius: 1em;
+        border-top-right-radius: 1em;
+    }
+</style>
+<!-- The following is NationBuilder template. 
+For candidate items, use the following HTML template to match the CSS above:
+
+<div class="grid-container">
+
+    <div class="grid-item">
+        <p style="text-align: center;">
+            <a href="https://example.site/candidate_donation_page">
+                <img 
+                    style="display: block; margin-left: auto; margin-right: auto;" 
+                    src="<candidate_image_uri>" 
+                    alt="Candidate Name" 
+                    width="250" height="250"
+                />
+                VOTE HERE NOW!
+            </a>
+        </p>
+        <p style="text-align: center;">
+            Candidate Name<br />
+            <a href="campaign_uri">Campaign Website</a>
+        </p>
+    </div>
+
+</div>
+-->
+{% include "breadcrumbs" %}
+
+{% if page.headline.size > 0 %}
+<h2 class="headline">{{ page.headline }}</h2>
+{% endif %}
+
+<div id="content">
+
+    <div id="intro" class="intro">
+        <div class="text-content">
+            {{ page.basic.content }}
+        </div>
+    </div>
+
+    {% if page.tags_count > 0 %}
+    <div class="page-tags">
+        {% include "page_tags" with page %}
+    </div>
+    {% endif %}
+
+    {% if page.is_homepage? == true and site.page_tags contains "homepage" %}
+    {% tag "homepage" with "homepage_widget" %}
+    {% endif %}
+
+    <div class="like-page">
+        <strong>Do you like this page?</strong>
+        {% include "like_page" %}
+    </div>
+
+    {% if page.show_stream? %}
+    {% include "page_stream" %}
+    {% endif %}
+
+</div>
+
+<script>
+    /*
+    MIT License
+    
+    Permission is hereby granted, free of charge, to any person obtaining a copy of this software (the "Software"),
+    to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, 
+    publish, distribute, and/or sublicense copies of the Software, provided that you include a link to @CarterCole on 
+    Twitter (https://x.com/CarterCole) to attribute authorship. You are not permitted to sell copies of the Software.
+    
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO 
+    THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE 
+    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, 
+    TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+    */
+    const MAX_HEIGHT = 200;
+    const gradientColors = [
+        '#00FF00', // Winning Green
+        '#66FF00', // Light Green
+        '#CCFF00', // Yellow-Green
+        '#FFFF00', // Yellow
+        '#FFD700', // Gold
+        '#FFA500', // Orange
+        '#FF6347', // Tomato
+        '#FF0000'  // Fail Red
+    ];
+
+
+    const contentContainer = document.getElementById('content');
+
+    const contestants = {
+        "<candidate_1>": {
+            img: "https://uri-to-candidate-image",
+            url: "/<candidate_donation_page_slug>"
+        },
+        "<candidate_2>": {
+            img: "https://uri-to-candidate-image",
+            url: "/<candidate_donation_page_slug>"
+        },
+        "<candidate_n>": {
+            img: "https://uri-to-candidate-image",
+            url: "/<candidate_donation_page_slug>"
+        },
+    };
+
+    async function getDataAndUpdateDiv(id) {
+        const url = contestants[id].url
+        try {
+            const response = await fetch(url);
+            const html = await response.text();
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            const elements = doc.querySelectorAll('#content h3');
+            const cents = Array.from(elements).map(element => {
+                let content = element.textContent.trim();
+                const match = content.match(/\$([\d,]+(\.\d{2})?)/);
+                if (match) {
+                    return Math.round(parseFloat(match[1].replace(',', '')) * 100);
+                }
+                return null;
+            })[0];
+
+            const div = document.getElementById(id);
+
+            if (div) {
+                // Update the height and text content of the div
+                const inner = div.querySelector('.bar-inner');
+                //inner.style.height = `${cents}px`;
+
+                inner.textContent = cents !== null ? `$${(cents / 100).toFixed(0)}` : 'Error';
+            }
+
+            return { id, cents };
+        } catch (error) {
+            console.error(`Error fetching data for ${url}:`, error);
+            return { id, cents: null, error: true };
+        }
+    }
+
+    async function updateDivs() {
+        const resultsContainer = document.createElement('div');
+        resultsContainer.className = 'graph-container';
+
+        for (const [contestantId, { img, url }] of Object.entries(contestants)) {
+            const bar = document.createElement('a');
+            bar.href = url;
+            bar.id = contestantId;
+            bar.className = 'bar';
+
+            const barImg = document.createElement('img');
+            barImg.src = img
+
+            const barInner = document.createElement('div');
+            barInner.className = 'bar-inner';
+            bar.appendChild(barInner);
+            bar.appendChild(barImg);
+            resultsContainer.appendChild(bar);
+        }
+        contentContainer.insertBefore(resultsContainer, contentContainer.firstChild)
+
+        const results = await Promise.all(Object.keys(contestants).map(id => getDataAndUpdateDiv(id)));
+        results.sort((a, b) => {
+            // Sort in descending order based on the cents property
+            return (b.cents || 0) - (a.cents || 0);
+        });
+
+        const totalCents = results.reduce((tot, { cents }) => cents + tot, 0)
+
+        results.forEach(({ id, cents }, idx) => {
+            const contestant = document.getElementById(id);
+
+            if (contestant) {
+                contestant.style.order = idx + 1;
+                //contestant.style.backgroundColor = (idx < 4) ? gradientColors[0] : gradientColors[7];
+                const inner = contestant.querySelector('.bar-inner');
+                inner.style.backgroundColor = gradientColors[idx];
+                let height = Math.floor(MAX_HEIGHT * (cents / totalCents));
+                if (cents >= 1500) {
+                    console.log('added to ', id)
+                    height += 20
+                }
+                if (height == 0) {
+                    inner.style.display = 'none';
+                } else {
+                    inner.style.height = `${height}px`
+                }
+            }
+
+
+        });
+
+        // Log or do something with the sorted results
+        console.log({ results, totalCents });
+    }
+
+    updateDivs();
+</script>
